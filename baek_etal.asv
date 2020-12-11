@@ -11,9 +11,9 @@ uti = [0.41130999300361837    0.0014241633805865128   0.10954825924790529     0.
        0.07770052548160622    0.13101584660539967     0.013513632001002363    0.3277699959119918;
        0.0698871955687706     0.192184073329005       0.14165934558077242     0.14626938552145202];
 %   arbitrary periods
-p = [60      125     170    190;
-     50      100     130    160;
-     35      75      110    115];
+p = [60      125     200    125;
+     50      100     150    80;
+     35      75      50     30];
 %   deadlines are equal to periods
 d = p;
 %   calculating the WCET, considering that U = WCET/PERIOD        
@@ -42,7 +42,7 @@ for mode = 1 : (n_modes - 1)
     %   for every task
     for task = 1 : n_tasks
         keepgoing = true;
-        %slack_iter = 0;
+        slack_iter = 0;
         while (is_sched && keepgoing)
             %   stores the slack values of the current and the upcoming mode before updating the slacks
             old_x_y_s = s(x : y,:);
@@ -54,7 +54,7 @@ for mode = 1 : (n_modes - 1)
                 rkx(x,k) = theorem_1(x, k, d, p, s, e, m, true);
                 if rkx(x,k) < d(x, k)
                    s(x, k) = min(d(x, k) - rkx(x,k), S(task));
-                   fprintf('Slack of task %i on mode %i is %f\n', k, x, s(x, k))
+                   
                 end
             end
             %   mode y -> (h)
@@ -75,7 +75,6 @@ for mode = 1 : (n_modes - 1)
                 end
             end
         %fprintf('número de Slacks: %i\n', slack_iter)
-        fprintf('-------------------------------------\n')
         %slack_iter = slack_iter + 1;
         end
         if ~is_sched
@@ -91,7 +90,7 @@ toc;
 
 %   theorem 1
 function rku = theorem_1(u, k, d, p, s, e, m, is_it_g)
-    %n_iteractions = 0;
+    n_iteractions = 0;
     rkux = e(u,k);
     %   checks if the given u is either g or h
     if(is_it_g)
@@ -104,15 +103,15 @@ function rku = theorem_1(u, k, d, p, s, e, m, is_it_g)
         next_rkux = e(u, k) + floor( (1/m)  *  (calcSigma(d, e, p, rkux, mode, k, s)) );
         if(next_rkux == rkux)
             %   if it converged, skip the iteration and return the converged value
-            %fprintf('número de iteracoes: %i\n', n_iteractions)
+            fprintf('número de iteracoes: %i\n', n_iteractions)
+            %disp(n_iteractions);
             break;
         else
             %   updates the rkux for the next iteration
-            %n_iteractions = n_iteractions + 1;
+            n_iteractions = n_iteractions + 1;
             rkux = next_rkux;
         end
     end
-    %fprintf('r of task %i on mode %i is %f\n', k, u, next_rkux)
     rku = next_rkux;
 end
 
