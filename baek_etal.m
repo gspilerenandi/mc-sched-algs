@@ -11,9 +11,9 @@ uti = [0.41130999300361837    0.0014241633805865128   0.10954825924790529     0.
        0.07770052548160622    0.13101584660539967     0.013513632001002363    0.3277699959119918;
        0.0698871955687706     0.192184073329005       0.14165934558077242     0.14626938552145202];
 %   arbitrary periods
-p = [60      125     170    190;
-     50      100     130    160;
-     35      75      110    115];
+p = [60      70     85    100;
+     50      55     70    100;
+     35      40     55    80];
 %   deadlines are equal to periods
 d = p;
 %   calculating the WCET, considering that U = WCET/PERIOD        
@@ -24,11 +24,11 @@ n_modes = size(uti,1);
 
 %   initial upper-bound slack values of each task 
 S = Inf(1,n_tasks);
-%   initial slack values of each task in each e
+%   initial slack values of each task in each mode
 s = zeros(size(uti));   
 %   the first upper bounds are
 rkx = zeros(size(uti));
-rkx(1,:) = (d(1,:) - s(1,:));
+%%rkx(1,:) = (d(1,:) - s(1,:));
 
 %   initializing the verification parameter of the loops
 is_sched = true;
@@ -40,58 +40,61 @@ for mode = 1 : (n_modes - 1)
     %   zeroes all the columns of two lines of 's'
     s(x : y, :) = zeros(2,n_tasks);
     %   for every task
-    for task = 1 : n_tasks
-        keepgoing = true;
-        %slack_iter = 0;
-        while (is_sched && keepgoing)
-            %   stores the slack values of the current and the upcoming mode before updating the slacks
-            old_x_y_s = s(x : y,:);
-            %    line 3
-            rix = d(x, task) - s(x, task);
-            riy = d(y, task) - s(y, task);
-            %   mode x -> (g)
-            for k = 1 : n_tasks
-                rkx(x,k) = theorem_1(x, k, d, p, s, e, m, true);
-                if rkx(x,k) < d(x, k)
-                   s(x, k) = min(d(x, k) - rkx(x,k), S(task));
-                   fprintf('Slack of task %i on mode %i is %f\n', k, x, s(x, k))
-                end
+    %for task = 1 : n_tasks
+    keepgoing = true;
+    slack_iter = 0;
+    while (is_sched && keepgoing)
+        %   stores the slack values of the current and the upcoming mode before updating the slacks
+        fprintf('Iteration %i\n', slack_iter)
+        old_x_y_s = s(x : y,:);
+        %    line 3, unused?
+        %   rix = d(x, task) - s(x, task);
+        %   riy = d(y, task) - s(y, task);
+
+        %   mode x -> (g)
+        fprintf('Slacks on mode X %i\n', x)
+        for k = 1 : n_tasks
+            rkx(x,k) = theorem_1(x, k, d, p, s, e, m, true);
+            if rkx(x,k) < d(x, k)
+               s(x, k) = min(d(x, k) - rkx(x,k), S(k));
+               fprintf('Slack of task %i is %f\n', k, s(x, k))
             end
-            %   mode y -> (h)
-            for k = 1 : n_tasks
-                rkx(y,k) = theorem_1(y, k, d, p, s, e, m, false);
-                if rkx(y,k) < d(y, k)
-                   s(y, k) = d(y, k) - rkx(y,k);
-                end
-            end
-            if s(x : y,:) == old_x_y_s
-                for k = 1 : n_tasks
-                    if ((rkx(x,k) <= d(x,k)) && (rkx(y,k) <= d(y,k)))
-                            S(k) = s(y, k);
-                        keepgoing = false;
-                    else
-                        is_sched = false;
-                    end 
-                end
-            end
-        %fprintf('número de Slacks: %i\n', slack_iter)
-        fprintf('-------------------------------------\n')
-        %slack_iter = slack_iter + 1;
         end
-        if ~is_sched
-           break 
+        fprintf('Slacks on mode Y %i\n', y)
+        %   mode y -> (h)
+        for k = 1 : n_tasks
+            rkx(y,k) = theorem_1(y, k, d, p, s, e, m, false);
+            if rkx(y,k) < d(y, k)
+               s(y, k) = d(y, k) - rkx(y,k);
+               fprintf('Slack of task %i is %f\n', k, s(y, k))
+            end
         end
+        if isequal(s(x : y,:),old_x_y_s)
+            if isequal( le(rkx(x,:), d(x,:)), le(rkx(y,:), d(y,:)) ) 
+                S(k) = s(y, k);
+                keepgoing = false;
+            else
+                is_sched = false;
+            end 
+        end
+        %keepgoing = false;
+    slack_iter =  slack_iter + 1;
+    fprintf('-------------------------------------\n')
+    %slack_iter = slack_iter + 1;
     end
     if ~is_sched
        break 
     end
+    %end
+    %if ~is_sched
+    %   break 
+    %end
 end
 %   cheks the amount of time it took to calculate everything
 toc;
 
 %   theorem 1
 function rku = theorem_1(u, k, d, p, s, e, m, is_it_g)
-    %n_iteractions = 0;
     rkux = e(u,k);
     %   checks if the given u is either g or h
     if(is_it_g)
@@ -101,14 +104,12 @@ function rku = theorem_1(u, k, d, p, s, e, m, is_it_g)
     end
     %   fixed-point iteration
     while true
-        next_rkux = e(u, k) + floor( (1/m)  *  (calcSigma(d, e, p, rkux, mode, k, s)) );
+        next_rkux = e(u, k) + floor( (1/m)  *  (calcSigma(d, e, p, rkux, mode, k, s, is_it_g)) );
         if(next_rkux == rkux)
             %   if it converged, skip the iteration and return the converged value
-            %fprintf('número de iteracoes: %i\n', n_iteractions)
             break;
         else
             %   updates the rkux for the next iteration
-            %n_iteractions = n_iteractions + 1;
             rkux = next_rkux;
         end
     end
@@ -117,7 +118,7 @@ function rku = theorem_1(u, k, d, p, s, e, m, is_it_g)
 end
 
 %   deadlines, wcet, periods, interval (rku(x) here), current mode, task not to consider, previous response time, slack, initial mode transition?
-function sigma = calcSigma(d, e, p, l, mode, k, s)
+function sigma = calcSigma(d, e, p, l, mode, k, s, is_it_g)
     sigma = 0;
     %   from
     g = mode;
@@ -146,18 +147,21 @@ function sigma = calcSigma(d, e, p, l, mode, k, s)
                 end
                 Wigh = max([Wig_l, Wih_l, Wigh1, Wigh2]);
             end
-            %   is it really e(mode,k) ?
-            sigma = sigma + min(Wigh, l - e(mode,k) + 1);
+            if(is_it_g)
+                sigma = sigma + min(Wigh, l - e(g,k) + 1);
+            else
+                sigma = sigma + min(Wigh, l - e(h,k) + 1);
+            end
         end
     end
 end
 
 %   equation 8    
-%   period, wcet, interval (rku(x) here), current mode, task position
+%   interval (rku(x) here), period, wcet, current mode, task position
 function F = calcF(l, p, e, mode, i)
     if l > 0
         floor_div = floor(l/p(mode,i));
-        F = floor_div * e(mode,i) + min([e(mode,i), l - floor_div*p(mode,i)]);
+        F = floor_div * e(mode,i) + min(e(mode,i), l - floor_div*p(mode,i));
     else
        F = 0;
     end
