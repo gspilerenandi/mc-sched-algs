@@ -71,7 +71,7 @@ for mode = 1 : (n_modes - 1)
         disp(s(y,:))
         if isequal(s(x : y,:),old_x_y_s)
             if isequal( le(rkx(x,:), d(x,:)), le(rkx(y,:), d(y,:)) ) 
-                S(k) = s(y, k);
+                S(:) = s(y, :);
                 keepgoing = false;
             else
                 is_sched = false;
