@@ -52,23 +52,23 @@ for mode = 1 : (n_modes - 1)
         %   riy = d(y, task) - s(y, task);
 
         %   mode x -> (g)
-        fprintf('Slacks on mode X %i\n', x)
         for k = 1 : n_tasks
             rkx(x,k) = theorem_1(x, k, d, p, s, e, m, true);
             if rkx(x,k) < d(x, k)
                s(x, k) = min(d(x, k) - rkx(x,k), S(k));
-               fprintf('Slack of task %i is %f\n', k, s(x, k))
             end
         end
-        fprintf('Slacks on mode Y %i\n', y)
+        fprintf('X: %i =>', x)
+        disp(s(x,:))
         %   mode y -> (h)
         for k = 1 : n_tasks
             rkx(y,k) = theorem_1(y, k, d, p, s, e, m, false);
             if rkx(y,k) < d(y, k)
                s(y, k) = d(y, k) - rkx(y,k);
-               fprintf('Slack of task %i is %f\n', k, s(y, k))
             end
         end
+        fprintf('Y: %i =>', y)
+        disp(s(y,:))
         if isequal(s(x : y,:),old_x_y_s)
             if isequal( le(rkx(x,:), d(x,:)), le(rkx(y,:), d(y,:)) ) 
                 S(k) = s(y, k);
@@ -79,8 +79,7 @@ for mode = 1 : (n_modes - 1)
         end
         %keepgoing = false;
     slack_iter =  slack_iter + 1;
-    fprintf('-------------------------------------\n')
-    %slack_iter = slack_iter + 1;
+    %fprintf('-------------------------------------\n')
     end
     if ~is_sched
        break 
@@ -90,6 +89,8 @@ for mode = 1 : (n_modes - 1)
     %   break 
     %end
 end
+fprintf('-- Slack after: \n')
+disp(transpose(s))
 %   cheks the amount of time it took to calculate everything
 toc;
 
