@@ -1,12 +1,11 @@
 %   this script is based on the paper https://ieeexplore.ieee.org/document/9088160
-
 %   tic -> toc: elapsed time to perform all the calculations
 tic;
 %   number of processors
 m = 2;
 %   uunifast single core tasks utilization: 4 tasks; utilization bound 0.55
 %   columns are tasks and rows are modes: 4 tasks and 3 modes
-%   modes are in ascending order of priority, i.e. row 3 has a higher priority than row 1
+%   priority based on RM (priority inversely proportional to the period)
 uti = [0.41130999300361837    0.0014241633805865128   0.10954825924790529     0.027717584367889847;
        0.07770052548160622    0.13101584660539967     0.013513632001002363    0.3277699959119918;
        0.0698871955687706     0.192184073329005       0.14165934558077242     0.14626938552145202];
@@ -28,7 +27,6 @@ S = Inf(1,n_tasks);
 s = zeros(size(uti));   
 %   the first upper bounds are
 rkx = zeros(size(uti));
-%%rkx(1,:) = (d(1,:) - s(1,:));
 
 %   initializing the verification parameter of the loops
 is_sched = true;
@@ -40,14 +38,13 @@ for mode = 1 : (n_modes - 1)
     %   zeroes all the columns of two lines of 's'
     s(x : y, :) = zeros(2,n_tasks);
     %   for every task
-    %for task = 1 : n_tasks
     keepgoing = true;
     slack_iter = 0;
     while (is_sched && keepgoing)
         %   stores the slack values of the current and the upcoming mode before updating the slacks
         fprintf('Iteration %i\n', slack_iter)
         old_x_y_s = s(x : y,:);
-        %    line 3, unused?
+        %    line 3, unused? -> check Notion for possible explanation
         %   rix = d(x, task) - s(x, task);
         %   riy = d(y, task) - s(y, task);
 
@@ -77,21 +74,15 @@ for mode = 1 : (n_modes - 1)
                 is_sched = false;
             end 
         end
-        %keepgoing = false;
     slack_iter =  slack_iter + 1;
-    %fprintf('-------------------------------------\n')
     end
     if ~is_sched
        break 
     end
-    %end
-    %if ~is_sched
-    %   break 
-    %end
 end
 fprintf('-- Slack after: \n')
 disp(transpose(s))
-%   cheks the amount of time it took to calculate everything
+%   cheks the amount of time it took to perform the schedulability analysis
 toc;
 
 %   theorem 1
@@ -114,7 +105,6 @@ function rku = theorem_1(u, k, d, p, s, e, m, is_it_g)
             rkux = next_rkux;
         end
     end
-    %fprintf('r of task %i on mode %i is %f\n', k, u, next_rkux)
     rku = next_rkux;
 end
 
